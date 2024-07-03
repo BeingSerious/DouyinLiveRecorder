@@ -623,10 +623,11 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
         appuid = host_id_match.group(1)
     else:
         appuid_match = re.search('appuid=(.*?)(?=&|$)', url)
-        if not appuid_match:
-            raise ValueError(f"Invalid URL, 'appuid' not found in {url}")
-        appuid = appuid_match.group(1)
-        
+        if appuid_match:
+            appuid = appuid_match.group(1)
+        else:
+            appuid = None  # If appuid is not found, set it to None
+            
     room_id_match = re.search('/livestream/(.*?)(?=/|\?)', url)
     if not room_id_match:
         raise ValueError(f"Invalid URL, 'room_id' not found in {url}")
@@ -643,7 +644,10 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
     }
 
     if live_status == 0:
-        flv_url = f'http://live-play.xhscdn.com/live/{room_id}.flv?uid={appuid}'
+        if appuid:
+            flv_url = f'http://live-play.xhscdn.com/live/{room_id}.flv?uid={appuid}'
+        else:
+            flv_url = f'http://live-play.xhscdn.com/live/{room_id}.flv'
         result['flv_url'] = flv_url
         result['is_live'] = True
         result['record_url'] = flv_url
