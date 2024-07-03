@@ -604,6 +604,10 @@ def get_bilibili_stream_data(url: str, proxy_addr: Union[str, None] = None, cook
         return {"anchor_name": '', "is_live": False}
 
 
+import re
+import json
+from typing import Union, Dict, Any
+
 @trace_error_decorator
 def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: Union[str, None] = None) -> Dict[str, Any]:
     headers = {
@@ -615,6 +619,7 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
     if cookies:
         headers['Cookie'] = cookies
 
+    # Check and handle 'xhslink.com' URLs
     if 'xhslink.com' in url:
         url = get_req(url, proxy_addr=proxy_addr, headers=headers, redirect_url=True)
         host_id_match = re.search('host_id=(.*?)(?=&|$)', url)
@@ -627,15 +632,19 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
             appuid = appuid_match.group(1)
         else:
             appuid = None  # If appuid is not found, set it to None
-            
+    
+    # Extract room_id
     room_id_match = re.search('/livestream/(.*?)(?=/|\?)', url)
     if not room_id_match:
         raise ValueError(f"Invalid URL, 'room_id' not found in {url}")
     room_id = room_id_match.group(1)
     
+    # Construct API URL and fetch JSON data
     app_api = f'https://www.xiaohongshu.com/api/sns/red/live/app/v1/ecology/outside/share_info?room_id={room_id}'
     json_str = get_req(url=app_api, proxy_addr=proxy_addr, headers=headers)
     json_data = json.loads(json_str)
+    
+    # Extract data from JSON response
     anchor_name = json_data['data']['host_info']['nickname']
     live_status = json_data['data']['room']['status']
     result = {
@@ -643,6 +652,7 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
         "is_live": False,
     }
 
+    # Check live status and construct FLV URL
     if live_status == 0:
         if appuid:
             flv_url = f'http://live-play.xhscdn.com/live/{room_id}.flv?uid={appuid}'
@@ -653,6 +663,7 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
         result['record_url'] = flv_url
     
     return result
+
 
 
 
