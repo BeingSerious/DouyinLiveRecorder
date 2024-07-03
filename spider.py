@@ -605,8 +605,7 @@ def get_bilibili_stream_data(url: str, proxy_addr: Union[str, None] = None, cook
 
 
 @trace_error_decorator
-def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: Union[str, None] = None) -> \
-        Dict[str, Any]:
+def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: Union[str, None] = None) -> Dict[str, Any]:
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
         'Accept': 'application/json, text/plain, */*',
@@ -618,12 +617,22 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
 
     if 'xhslink.com' in url:
         url = get_req(url, proxy_addr=proxy_addr, headers=headers, redirect_url=True)
-        appuid = re.search('host_id=(.*?)(?=&|$)', url).group(1)
+        host_id_match = re.search('host_id=(.*?)(?=&|$)', url)
+        if not host_id_match:
+            raise ValueError(f"Invalid URL, 'host_id' not found in {url}")
+        appuid = host_id_match.group(1)
     else:
-        appuid = re.search('appuid=(.*?)(?=&|$)', url).group(1)
-    room_id = re.search('/livestream/(.*?)(?=/|\?)', url).group(1)
+        appuid_match = re.search('appuid=(.*?)(?=&|$)', url)
+        if not appuid_match:
+            raise ValueError(f"Invalid URL, 'appuid' not found in {url}")
+        appuid = appuid_match.group(1)
+        
+    room_id_match = re.search('/livestream/(.*?)(?=/|\?)', url)
+    if not room_id_match:
+        raise ValueError(f"Invalid URL, 'room_id' not found in {url}")
+    room_id = room_id_match.group(1)
+    
     app_api = f'https://www.xiaohongshu.com/api/sns/red/live/app/v1/ecology/outside/share_info?room_id={room_id}'
-    # app_api = f'https://www.redelight.cn/api/sns/red/live/app/v1/ecology/outside/share_info?room_id={room_id}'
     json_str = get_req(url=app_api, proxy_addr=proxy_addr, headers=headers)
     json_data = json.loads(json_str)
     anchor_name = json_data['data']['host_info']['nickname']
@@ -633,13 +642,14 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
         "is_live": False,
     }
 
-    # 这个判断不准确，无论是否在直播status都为0,暂无法判断
     if live_status == 0:
         flv_url = f'http://live-play.xhscdn.com/live/{room_id}.flv?uid={appuid}'
         result['flv_url'] = flv_url
         result['is_live'] = True
         result['record_url'] = flv_url
+    
     return result
+
 
 
 @trace_error_decorator
