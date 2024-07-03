@@ -633,8 +633,8 @@ def get_xhs_stream_url(url: str, proxy_addr: Union[str, None] = None, cookies: U
         else:
             appuid = None  # If appuid is not found, set it to None
     
-    # Extract room_id
-    room_id_match = re.search('/livestream/(.*?)(?=/|\?)', url)
+    # Improved room_id extraction with debugging information
+    room_id_match = re.search(r'/livestream/(\d+)', url)
     if not room_id_match:
         raise ValueError(f"Invalid URL, 'room_id' not found in {url}")
     room_id = room_id_match.group(1)
